@@ -1,0 +1,4 @@
+To make the wait for the trip to Iceland more fun,
+given the locations (latitude and longitude) of the places we are interested in visiting and the number of days we will be able to tour the country
+ we will find as many clusters of places as days of stay.
+ Then we will solve the Traveling Salesman Problem (TSP) to find the optimal order to visit, considering personal constraints.
