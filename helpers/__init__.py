@@ -2,6 +2,7 @@
 from typing import List, Tuple
 # Processing
 import pandas as pd
+import numpy as np
 # Main
 from geopy.distance import geodesic
 
@@ -25,7 +26,7 @@ def read_cities(filepath: str = 'datasets/cities.csv') -> List[Tuple[float, floa
     # Convert DataFrame to list of tuples
     cities = list(df.itertuples(index=False, name=None))
 
-    return cities
+    return np.array(cities)
 
 def calculate_distance(city_1:Tuple[float, float], city_2:Tuple[float, float]):
     '''
