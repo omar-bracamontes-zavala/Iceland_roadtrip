@@ -9,7 +9,7 @@ from geopy.distance import geodesic
 #
 # Helpers
 #
-def read_cities(filepath: str = 'datasets/cities.csv') -> List[Tuple[float, float]]:
+def read_cities(filepath: str = 'source/datasets/cities.csv') -> List[Tuple[float, float]]:
     """
     Loads geographic city data from a CSV file and returns a list of tuples.
     Each tuple contains latitude and longitude as floats.

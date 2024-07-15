@@ -216,7 +216,7 @@ def k_means(
     return centroids, assignments
 
 # Main
-def run_k_means(k_clusters: int) -> Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]:
+def run_k_means(k_clusters: int, cities_filepath: str = 'source/datasets/cities.csv') -> Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]:
     """
     Run K-means clustering on city data.
 
@@ -226,7 +226,7 @@ def run_k_means(k_clusters: int) -> Tuple[List[Tuple[float, float]], Dict[int, L
     Returns:
     Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]: Final centroids and clustered cities.
     """
-    cities = read_cities()
+    cities = read_cities(cities_filepath)
     centroids, assignments = k_means(k_clusters=k_clusters, cities=cities, iterations=100)
     
     # Analyze
@@ -239,6 +239,6 @@ def run_k_means(k_clusters: int) -> Tuple[List[Tuple[float, float]], Dict[int, L
     return centroids, clustered_cities
 
 if __name__=='__main__':
-    k_clusters = 6 # days
+    k_clusters = 5 # days
     centroids, clustered_cities = run_k_means(k_clusters=k_clusters)
         
