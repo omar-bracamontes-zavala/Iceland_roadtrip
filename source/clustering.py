@@ -19,7 +19,7 @@ import random, json
 def plot_cities(cities: List[Tuple[float, float]], assignments: List[int], centroids: List[Tuple[float, float]], map_or_scatter: str='scatter', autoclose: bool=True):
     if map_or_scatter == 'scatter':
         # Unpacking the list of tuples into x and y coordinates
-        x, y = zip(*cities)
+        lat, lon = zip(*cities) 
         
         # Find the number of unique clusters
         num_clusters = len(set(assignments))
@@ -28,16 +28,16 @@ def plot_cities(cities: List[Tuple[float, float]], assignments: List[int], centr
         cmap = plt.get_cmap('tab20', num_clusters)
         
         # Creating the scatter plot with cluster-based colors
-        scatter = plt.scatter(x, y, c=assignments, cmap=cmap, s=30, edgecolor='k', alpha=0.6)
+        scatter = plt.scatter(lon, lat, c=assignments, cmap=cmap, s=30, edgecolor='k', alpha=0.6)
 
         # Plotting the centroids with full opacity and same color as their cluster
-        for i,(x,y) in enumerate(centroids):
-            plt.scatter(x, y, c=[i], cmap=cmap, alpha=1, s=150, marker='x')
+        for i, (lat, lon) in enumerate(centroids):
+            plt.scatter(lon, lat, c=[i], cmap=cmap, alpha=1, s=150, marker='x')
 
         # Adding title and labels
         plt.title('Iceland')
-        plt.xlabel('Latitude')
-        plt.ylabel('Longitude')
+        plt.xlabel('Longitude')
+        plt.ylabel('Latitude')
         
         # Showing the plot
         plt.colorbar(scatter, label='Cluster', ticks=range(num_clusters), boundaries=np.arange(num_clusters+1)-0.5)

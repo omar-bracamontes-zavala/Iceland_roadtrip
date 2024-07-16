@@ -1,4 +1,25 @@
-To make the wait for the trip to Iceland more fun,
-given the locations (latitude and longitude) of the places we are interested in visiting and the number of days we will be able to tour the country
- we will find as many clusters of places as days of stay.
- Then we will solve the Traveling Salesman Problem (TSP) to find the optimal order to visit, considering personal constraints.
+To make the wait for our roadtrip to Iceland more fun we made this code that optimizes distance and time (=> gas .: money) given the locations you want to visit.
+
+Loctions Source: 
+
+You could get your csv from any source as long as the columns at least have latitude and longitude (in our case those are the col 1 and 2, if this variate, change them on read_cities function).
+In our case, we followed this steps
+    1. Pin the locations of the places we are interested in visiting: https://www.google.com/intl/es/maps/about/mymaps/ 
+    2. Export as csv (the format may be different, ig).
+
+Usage:
+
+Given the n locations (latitude and longitude) and the number of days we will be able to tour the country, this code will find as many clusters of places as days of stay with distance and time as constrains.
+Then it will solve the Traveling Salesman Problem (TSP) to find the optimal order to visit, considering personal constraints.
+
+    0. Create a venv and install requirements.
+    1. Run distance_matrix.py, since it pings to Distance Matrix Google API https://developers.google.com/maps/documentation/distance-matrix, you should:
+        a. Generate GOOGLE_API_KEY
+        b. Export it into your env
+
+        This will output a nxn matrix where each entry has (distance in meters, duration in seconds, duration in traffic in seconds) stored as json in datasets/
+
+    2. Run the clustering.py (k-means). This may follow the constrains of distance and duration. A good initialization could be same clusters as days of vacations
+        This data could be useful to search for accomodations around the centroid of each cluster.
+
+    3. Run the tsp.py (simulated annealing).
