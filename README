@@ -17,7 +17,10 @@ Then it will solve the Traveling Salesman Problem (TSP) to find the optimal orde
         a. Generate GOOGLE_API_KEY
         b. Export it into your env
 
-        This will output a nxn matrix where each entry has (distance in meters, duration in seconds, duration in traffic in seconds) stored as json in datasets/
+        Note1: This will output a nxn matrix where each entry has (distance in meters, duration in seconds, duration in traffic in seconds) stored as json in datasets/
+        Note2: Some locations could have complete nulls that means that is not available roads (in our case, those are ment to be location for hiking)
+        Note3: This steo may generate charges ($)
+        Note4: By the date of developing this tool, the API has requesting limits specified at generate_distance_matrix() amnd they could variate.
 
     2. Run the clustering.py (k-means). This may follow the constrains of distance and duration. A good initialization could be same clusters as days of vacations
         This data could be useful to search for accomodations around the centroid of each cluster.
