@@ -1,10 +1,9 @@
 # Type Hints
 from typing import List, Tuple
 # Processing
+import json
 import pandas as pd
 import numpy as np
-# Main
-from geopy.distance import geodesic
 
 #
 # Helpers
@@ -28,8 +27,30 @@ def read_cities(filepath: str = 'source/datasets/cities.csv') -> List[Tuple[floa
 
     return np.array(cities)
 
-def calculate_distance(city_1:Tuple[float, float], city_2:Tuple[float, float]):
-    '''
-        city_1: (lat, lon)
-    '''
-    return geodesic(city_1, city_2).km
+def _save_file_as_json(distance_matrix: List[List[Tuple[int, int, int]]], filename: str) -> None:
+    """
+    Save the distance matrix to a JSON file.
+
+    Args:
+        distance_matrix (List[List[Tuple[int, int, int]]]): The distance matrix to save.
+        filename (str): The name of the JSON file to save the matrix in.
+    """
+    filepath = f'source/datasets/{filename}'
+    with open(filepath, 'w') as file:
+        json.dump(distance_matrix, file)
+  
+def load_distance_matrix_from_json(filename: str) -> List[List[Tuple[int, int, int]]]:
+    """
+    Load the distance matrix from a JSON file.
+
+    Args:
+        filename (str): The name of the JSON file to load the matrix from.
+
+    Returns:
+        List[List[Tuple[int, int, int]]]: The loaded distance matrix.
+    """
+    filepath = f'source/datasets/{filename}'
+    with open(filepath, 'r') as file:
+        distance_matrix = json.load(file)
+    return distance_matrix
+ 

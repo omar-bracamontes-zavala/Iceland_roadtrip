@@ -1,39 +1,9 @@
 # Type Hints
 from typing import List, Tuple, Dict, Any, Generator
 # Main
-import os, requests, urllib.parse, json
-from helpers import read_cities
-
-#
-# Extras
-#
-def _save_file_as_json(distance_matrix: List[List[Tuple[int, int, int]]], filename: str) -> None:
-    """
-    Save the distance matrix to a JSON file.
-
-    Args:
-        distance_matrix (List[List[Tuple[int, int, int]]]): The distance matrix to save.
-        filename (str): The name of the JSON file to save the matrix in.
-    """
-    filepath = f'source/datasets/{filename}'
-    with open(filepath, 'w') as file:
-        json.dump(distance_matrix, file)
-  
-def load_distance_matrix_from_json(filename: str) -> List[List[Tuple[int, int, int]]]:
-    """
-    Load the distance matrix from a JSON file.
-
-    Args:
-        filename (str): The name of the JSON file to load the matrix from.
-
-    Returns:
-        List[List[Tuple[int, int, int]]]: The loaded distance matrix.
-    """
-    filepath = f'source/datasets/{filename}'
-    with open(filepath, 'r') as file:
-        distance_matrix = json.load(file)
-    return distance_matrix
-      
+import os, requests, urllib.parse
+from helpers import read_cities, _save_file_as_json
+     
 #
 # Helpers
 #
@@ -115,8 +85,6 @@ def request_distance_matrix(origins: List[Tuple[float, float]], destinations: Li
     response = requests.get(url)
     raw_distance_matrix = response.json()
     
-    # if save_file:
-    #     _save_file_as_json(raw_distance_matrix, 'raw_distance_matrix.json')
     return raw_distance_matrix
   
 def parse_distance_matrix(distance_matrix_response: Dict[str, Any]) -> List[List[Tuple[int, int, int]]]:
@@ -142,8 +110,6 @@ def parse_distance_matrix(distance_matrix_response: Dict[str, Any]) -> List[List
         ]
         for origin in distance_matrix_response['rows']
     ]
-    # if save_file:
-    #     _save_file_as_json(distance_matrix, 'distance_matrix.json')
         
     return distance_matrix
 

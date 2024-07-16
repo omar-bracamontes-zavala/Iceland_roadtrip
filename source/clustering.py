@@ -4,13 +4,14 @@
 # Type Hints
 from typing import List, Tuple, Dict
 # Plot
-import matplotlib.pyplot as plt
 import folium
+import matplotlib.pyplot as plt
 # Main
-from helpers import calculate_distance, read_cities
-from collections import defaultdict
 import numpy as np
 import random, json
+from helpers import read_cities
+from geopy.distance import geodesic
+from collections import defaultdict
 
 
 #
@@ -65,6 +66,11 @@ def plot_cities(cities: List[Tuple[float, float]], assignments: List[int], centr
 
         print("Map has been saved to 'map.html'. Open this file in your web browser to view the map.")
 
+#
+# Tweaks (these are metrics to integrate real distance and time constrains to each cluster)
+#
+
+    
 
 #
 # K-Means: K clusters as the trip duration days
@@ -109,7 +115,7 @@ def assign_datum_to_cluster(
         if tuple(city) in centroid_set:
             assignments.append(centroid_set[tuple(city)])
         else:
-            distances = [calculate_distance(city, centroid) for centroid in centroids]
+            distances = [geodesic(city, centroid).km for centroid in centroids]
             assigned_centroid = np.argmin(distances)
             assignments.append(assigned_centroid)
 
@@ -173,7 +179,7 @@ def termination_criteria(
     bool: True if the maximum difference between old and new centroids is less than the tolerance, False otherwise.
     """
     max_difference = max(
-        calculate_distance(old_centroid, new_centroids[i]) 
+        geodesic(old_centroid, new_centroids[i]).km 
         for i, old_centroid in enumerate(old_centroids)
     )
     
