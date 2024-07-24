@@ -39,7 +39,7 @@ def _save_file_as_json(distance_matrix: List[List[Tuple[int, int, int]]], filena
     with open(filepath, 'w') as file:
         json.dump(distance_matrix, file)
   
-def load_distance_matrix_from_json(filename: str) -> List[List[Tuple[int, int, int]]]:
+def load_distance_matrix_from_json(filename: str = 'distance_matrix.json') -> List[List[Tuple[int, int, int]]]:
     """
     Load the distance matrix from a JSON file.
 

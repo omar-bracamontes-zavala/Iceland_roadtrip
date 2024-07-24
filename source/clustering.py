@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 # Main
 import numpy as np
 import random, json
-from helpers import read_cities
 from geopy.distance import geodesic
 from collections import defaultdict
+from helpers import read_cities, load_distance_matrix_from_json, _save_file_as_json
 
 
 #
@@ -69,8 +69,105 @@ def plot_cities(cities: List[Tuple[float, float]], assignments: List[int], centr
 #
 # Tweaks (these are metrics to integrate real distance and time constrains to each cluster)
 #
-
+def _calculate_city_errors(
+    cities: List[Tuple[float, float]], 
+    assignments: List[int], 
+    distance_matrix: List[List[Tuple[float, float]]], 
+    T: int,
+    print_info:bool = True,
+) -> Dict[int, Dict]:
+    """
+    Calculate city errors based on given distances and times.
     
+    Parameters:
+    cities (List[Tuple[float, float]]): List of city coordinates.
+    assignments (List[int]): List of cluster assignments for each city.
+    distance_matrix (List[List[Tuple[float, float]]]): Matrix containing distances and times between cities.
+    T (int): Driving time constraint per cluster in minutes.
+    
+    Returns:
+    Dict[int, Dict]: Cluster metrics including average errors.
+    """
+    
+    # Gather cities by their centroid assignments
+    clusters_metrics = gather_cities_by_centroid(
+        cities=cities, assignments=assignments, gather_coordinates_or_index='index'
+    )
+    
+    for cluster_details in clusters_metrics.values():
+        cluster_cities = cluster_details['cities']
+        N = len(cluster_cities)
+        t = T / N
+        
+        distances = np.zeros((N, N))
+        times = np.zeros((N, N))
+        
+        for i, city_i in enumerate(cluster_cities):
+            for j, city_j in enumerate(cluster_cities):
+                if i != j:
+                    dist, time = distance_matrix[city_i][city_j][0], distance_matrix[city_i][city_j][1]
+                    distances[i, j] = dist if not dist else t # Rough approach to deal with NaNs
+                    times[i, j] = time if not time else t
+                            
+        # print(f'\tDistance: {distances} \tTime: {times}')
+        
+        avg_distances = np.sum(distances, axis=1) / (N - 1)
+        avg_times = np.sum(times, axis=1) / (N - 1)
+        
+        # if print_info:
+        #     print(f'Avg Distance: {avg_distances} \tAverage Time: {avg_times}')
+        
+        cluster_details['avg_errors'] = list(avg_distances * avg_times / t)
+        
+    for cluster_details in clusters_metrics.values():
+        cluster_details['error'] = np.mean(cluster_details['avg_errors'])
+        cluster_details['stdev'] = np.std(cluster_details['avg_errors'])
+    
+    return clusters_metrics
+
+def _assign_outlier_to_new_cluster(
+    city: Tuple[float, float], 
+    centroids: List[Tuple[float, float]],
+    avoid_list: List[int] = []) -> List[int]:
+    """
+    Assign outlier city to the nearest centroid by calculating the geodesic distance to each centroid.
+    Args:
+    city (Tuple[float, float]): Coordinates of a city.
+    centroids (List[Tuple[float, float]]): A list of tuples, where each tuple contains coordinates of a centroid.
+    avoid_list (List[int]): A list with the cluster to avoid on assigment
+
+    Returns:
+    List[int]: A list where the index represents the index of a city in the cities input list, and the value at that index
+               represents the index of the closest centroid in the centroids input list.
+    """
+    centroid_set = {tuple(centroid): idx for idx, centroid in enumerate(centroids)}
+
+    distances = [geodesic(city, centroid).km for centroid in centroids]
+    assigned_centroid = np.argmin(distances)
+    
+    if assigned_centroid in avoid_list:
+        distances[assigned_centroid] = np.inf
+        assigned_centroid = np.argmin(distances)
+        
+    return assigned_centroid
+
+def _evaluate_clusters(
+    cities: List[Tuple[float, float]], 
+    assignments: List[int], 
+    centroids: List[Tuple[float, float]],
+    distance_matrix: List[List[Tuple[float, float]]], 
+    T: int
+    ):
+    clusters_metrics = _calculate_city_errors(cities=cities, assignments=assignments, distance_matrix=distance_matrix, T=T)
+        
+    for cluster, cluster_details in clusters_metrics.items():
+        threshold = cluster_details['error'] + 2 * cluster_details['stdev']
+        filter_indexes = [i for i, avg_error in enumerate(cluster_details['avg_errors']) if avg_error > threshold]
+        outliers = [cluster_details['cities'][i] for i in filter_indexes]
+        
+        # assign new clusters
+        for outlier in outliers:
+            assignments[outlier] = _assign_outlier_to_new_cluster(cities[outlier], centroids, list(assignments[outlier]))
 
 #
 # K-Means: K clusters as the trip duration days
@@ -86,14 +183,14 @@ def initialize_centroids(cities: List[Tuple[float, float]], k: int) -> List[Tupl
     k (int): The number of random cities to select.
 
     Returns:
-    List[float, float]: (numpy Array) A list of k randomly selected cities.
+    List[float, float]: (numpy Array) A list of k randomly selected (list index) cities.
     """
     if k > len(cities):
         raise ValueError("k cannot be greater than the number of cities in the list")
     return cities[np.random.choice(cities.shape[0], k, replace=False)]#random.sample(cities, k) 
 
 # Assigment Step
-def assign_datum_to_cluster(
+def assign_cities_to_cluster(
     cities: List[Tuple[float, float]], 
     centroids: List[Tuple[float, float]]) -> List[int]:
     """
@@ -116,13 +213,13 @@ def assign_datum_to_cluster(
             assignments.append(centroid_set[tuple(city)])
         else:
             distances = [geodesic(city, centroid).km for centroid in centroids]
-            assigned_centroid = np.argmin(distances)
+            assigned_centroid = np.argmin(distances)                
             assignments.append(assigned_centroid)
 
     return assignments
 
 # Update Step
-def gather_cities_by_centroid(cities: List[Tuple[float, float]], assignments: List[int]) -> Dict[int, List[Tuple[float, float]]]:
+def gather_cities_by_centroid(cities: List[Tuple[float, float]], assignments: List[int], gather_coordinates_or_index:str = 'coordinates') -> Dict[int, List[Tuple[float, float]]]:
     """
     Group cities by their assigned centroid.
 
@@ -135,12 +232,24 @@ def gather_cities_by_centroid(cities: List[Tuple[float, float]], assignments: Li
     Dict[int, List[Tuple[float, float]]]: A dictionary where the keys are centroid indices and the values 
                                           are lists of cities assigned to each centroid.
     """
-    clusters = defaultdict(list)
+    if gather_coordinates_or_index == 'coordinates':
+        clusters = defaultdict(list)
 
-    for city_index, cluster_index in enumerate(assignments):
-        clusters[cluster_index].append(cities[city_index])
+        for city_index, cluster_index in enumerate(assignments):
+            clusters[int(cluster_index)].append(list(cities[city_index])) #int & list bc it will be json serializable
 
-    return dict(clusters)
+        return dict(clusters)
+
+    elif gather_coordinates_or_index == 'index':
+
+        clusters_metrics = defaultdict(lambda: {'cities': [], 'avg_errors': [], 'error': None, 'stdev': None})
+
+        # Similar as gather_cities_by_centroid but instead of (lat_,lon) is by  city index to use them in distance matrix
+        for city_index, cluster_index in enumerate(assignments):
+            clusters_metrics[int(cluster_index)]['cities'].append(int(city_index))
+        
+        return dict(clusters_metrics)
+    
 
 def get_cluster_mean(cities: List[Tuple[float, float]], assignments: List[int]) -> List[Tuple[float, float]]:
     """
@@ -189,7 +298,9 @@ def termination_criteria(
 def k_means(
     k_clusters: int, 
     cities: List[Tuple[float, float]], 
-    iterations: int) -> Tuple[List[Tuple[float, float]], List[int]]:
+    iterations: int,
+    distance_matrix: List[List[Tuple[float, float]]], 
+    T: int) -> Tuple[List[Tuple[float, float]], List[int]]:
     """
     Perform K-means clustering.
 
@@ -202,13 +313,16 @@ def k_means(
     Tuple[List[Tuple[float, float]], List[int]]: Final centroids and city assignments.
     """
     centroids = initialize_centroids(cities, k_clusters)
-
+    
     for _ in range(iterations):
         # Assign city to centroid
-        assignments = assign_datum_to_cluster(cities, centroids)
+        assignments = assign_cities_to_cluster(cities, centroids)
+        
+        # Analyze assigments
+        _evaluate_clusters(cities, assignments, centroids, distance_matrix, T)
         
         # Plot the cities and centroids (optional, can be commented out for performance)
-        plot_cities(cities, assignments, centroids)
+        # plot_cities(cities, assignments, centroids)
         
         # Update centroid
         new_centroids = get_cluster_mean(cities, assignments)
@@ -222,29 +336,48 @@ def k_means(
     return centroids, assignments
 
 # Main
-def run_k_means(k_clusters: int, cities_filepath: str = 'source/datasets/cities.csv') -> Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]:
+def run_k_means(k_clusters: int, T:int, cities_filepath: str = 'source/datasets/cities.csv') -> Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]:
     """
     Run K-means clustering on city data.
 
     Args:
     k_clusters (int): Number of clusters.
+    T: driving time constrain per cluster. In minutes
 
     Returns:
     Tuple[List[Tuple[float, float]], Dict[int, List[Tuple[float, float]]]]: Final centroids and clustered cities.
     """
     cities = read_cities(cities_filepath)
-    centroids, assignments = k_means(k_clusters=k_clusters, cities=cities, iterations=100)
+    distance_matrix = load_distance_matrix_from_json()
+    centroids, assignments = k_means(k_clusters=k_clusters, cities=cities, iterations=100, distance_matrix=distance_matrix, T=T)
     
     # Analyze
     clustered_cities = gather_cities_by_centroid(cities=cities, assignments=assignments)
     for centroid_idx, cluster in clustered_cities.items():
         print(f'Centroid {centroid_idx} has {len(cluster)} cities')
         
+    clusters_metrics = _calculate_city_errors(cities=cities, assignments=assignments, distance_matrix=distance_matrix, T=T)
+        
     plot_cities(cities, assignments, centroids, autoclose=False)
     
-    return centroids, clustered_cities
+    return centroids, clustered_cities, clusters_metrics, assignments
 
 if __name__=='__main__':
     k_clusters = 5 # days
-    centroids, clustered_cities = run_k_means(k_clusters=k_clusters)
+    T_hours = 5
+    centroids, clustered_cities, clusters_metrics, assignments = run_k_means(k_clusters=k_clusters, T=T_hours*60)
+    
+    # print(clusters_metrics)
+    _save_file_as_json(
+        {
+            'centroids':centroids,
+            'clustered_cities':json.dumps(clustered_cities),
+            'clusters_metrics':json.dumps(clusters_metrics),
+            'assignments':assignments
+        },
+        'clustered_cities.json'
+    )
+
+        
+    print(clustered_cities, '\n', clusters_metrics)
         
