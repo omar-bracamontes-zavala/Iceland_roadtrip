@@ -367,17 +367,17 @@ if __name__=='__main__':
     T_hours = 5
     centroids, clustered_cities, clusters_metrics, assignments = run_k_means(k_clusters=k_clusters, T=T_hours*60)
     
-    # print(clusters_metrics)
+    # print(assignments)
     _save_file_as_json(
         {
             'centroids':centroids,
             'clustered_cities':json.dumps(clustered_cities),
             'clusters_metrics':json.dumps(clusters_metrics),
-            'assignments':assignments
+            'assignments':list(map(int,assignments))
         },
         'clustered_cities.json'
     )
 
         
-    print(clustered_cities, '\n', clusters_metrics)
+    # print(clustered_cities, '\n', clusters_metrics)
         
